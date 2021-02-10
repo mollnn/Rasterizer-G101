@@ -8,13 +8,14 @@
 #include "Texture.hpp"
 #include "OBJ_Loader.h"
 
+using namespace Eigen;
 
 
-Eigen::Matrix4f get_view_matrix(Eigen::Vector3f eye_pos)
+Matrix4f get_view_matrix(Vector3f eye_pos)
 {
-    Eigen::Matrix4f view = Eigen::Matrix4f::Identity();
+    Matrix4f view = Matrix4f::Identity();
 
-    Eigen::Matrix4f translate;
+    Matrix4f translate;
     translate << 1, 0, 0, -eye_pos[0],
         0, 1, 0, -eye_pos[1],
         0, 0, 1, -eye_pos[2],
@@ -25,22 +26,22 @@ Eigen::Matrix4f get_view_matrix(Eigen::Vector3f eye_pos)
     return view;
 }
 
-Eigen::Matrix4f get_model_matrix(float angle)
+Matrix4f get_model_matrix(float angle)
 {
-    Eigen::Matrix4f rotation;
+    Matrix4f rotation;
     angle = angle * MY_PI / 180.f;
     rotation << cos(angle), 0, sin(angle), 0,
         0, 1, 0, 0,
         -sin(angle), 0, cos(angle), 0,
         0, 0, 0, 1;
 
-    Eigen::Matrix4f scale;
+    Matrix4f scale;
     scale << 2.5, 0, 0, 0,
         0, 2.5, 0, 0,
         0, 0, 2.5, 0,
         0, 0, 0, 1;
 
-    Eigen::Matrix4f translate;
+    Matrix4f translate;
     translate << 1, 0, 0, 0,
         0, 1, 0, 0,
         0, 0, 1, 0,
@@ -49,13 +50,13 @@ Eigen::Matrix4f get_model_matrix(float angle)
     return translate * rotation * scale;
 }
 
-Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float zNear, float zFar)
+Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float zNear, float zFar)
 {
     // Students will implement this function
 
-    Eigen::Matrix4f projection = Eigen::Matrix4f::Identity();
+    Matrix4f projection = Matrix4f::Identity();
 
-    Eigen::Matrix4f persp2ortho = Eigen::Matrix4f::Identity();
+    Matrix4f persp2ortho = Matrix4f::Identity();
     persp2ortho << zNear, 0, 0, 0,
         0, zNear, 0, 0,
         0, 0, zNear + zFar, -zFar * zNear,
@@ -68,38 +69,38 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float z
     float box_right = box_top * aspect_ratio;
     float box_left = -box_right;
 
-    Eigen::Matrix4f ortho_scale = Eigen::Matrix4f::Identity();
+    Matrix4f ortho_scale = Matrix4f::Identity();
     ortho_scale << 2.0 / (box_right - box_left), 0, 0, 0,
         0, -2.0 / (box_top - box_bottom), 0, 0,
         0, 0, 2 / (zNear - zFar), 0,
         0, 0, 0, 1;
 
-    Eigen::Matrix4f ortho_trans = Eigen::Matrix4f::Identity();
+    Matrix4f ortho_trans = Matrix4f::Identity();
     ortho_trans << 1, 0, 0, -(box_left + box_right) / 2,
         0, 1, 0, -(box_top + box_bottom) / 2,
         0, 0, 1, -(zNear + zFar) / 2,
         0, 0, 0, 1;
 
-    Eigen::Matrix4f ortho = ortho_scale * ortho_trans;
+    Matrix4f ortho = ortho_scale * ortho_trans;
     projection = ortho * persp2ortho;
 
     return projection;
 }
 
-Eigen::Vector3f vertex_shader(const vertex_shader_payload &payload)
+Vector3f vertex_shader(const vertex_shader_payload &payload)
 {
     return payload.position;
 }
 
-Eigen::Vector3f normal_fragment_shader(const fragment_shader_payload &payload)
+Vector3f normal_fragment_shader(const fragment_shader_payload &payload)
 {
-    Eigen::Vector3f return_color = (payload.normal.head<3>().normalized() + Eigen::Vector3f(1.0f, 1.0f, 1.0f)) / 2.f;
-    Eigen::Vector3f result;
+    Vector3f return_color = (payload.normal.head<3>().normalized() + Vector3f(1.0f, 1.0f, 1.0f)) / 2.f;
+    Vector3f result;
     result << return_color.x() * 255, return_color.y() * 255, return_color.z() * 255;
     return result;
 }
 
-static Eigen::Vector3f reflect(const Eigen::Vector3f &vec, const Eigen::Vector3f &axis)
+static Vector3f reflect(const Vector3f &vec, const Vector3f &axis)
 {
     auto costheta = vec.dot(axis);
     return (2 * costheta * axis - vec).normalized();
@@ -107,55 +108,55 @@ static Eigen::Vector3f reflect(const Eigen::Vector3f &vec, const Eigen::Vector3f
 
 struct light
 {
-    Eigen::Vector3f position;
-    Eigen::Vector3f intensity;
+    Vector3f position;
+    Vector3f intensity;
 };
 
-Eigen::Vector3f texture_fragment_shader(const fragment_shader_payload &payload)
+Vector3f texture_fragment_shader(const fragment_shader_payload &payload)
 {
-    Eigen::Vector3f return_color = {0, 0, 0};
+    Vector3f return_color = {0, 0, 0};
     if (payload.texture)
     {
         // Get the texture value at the texture coordinates of the current fragment
         return_color = payload.texture->getColor(payload.tex_coords.x(), payload.tex_coords.y());
     }
-    Eigen::Vector3f texture_color;
+    Vector3f texture_color;
     texture_color << return_color.x(), return_color.y(), return_color.z();
 
-    Eigen::Vector3f ka = Eigen::Vector3f(0.005, 0.005, 0.005);
-    Eigen::Vector3f kd = texture_color / 255.f;
-    Eigen::Vector3f ks = Eigen::Vector3f(0.7937, 0.7937, 0.7937);
+    Vector3f ka = Vector3f(0.005, 0.005, 0.005);
+    Vector3f kd = texture_color / 255.f;
+    Vector3f ks = Vector3f(0.7937, 0.7937, 0.7937);
 
     auto l1 = light{{20, 20, 20}, {600, 200, 300}};
     auto l2 = light{{-20, 20, 0}, {200, 300, 600}};
 
     std::vector<light> lights = {l1, l2};
-    Eigen::Vector3f amb_light_intensity{10, 10, 10};
-    Eigen::Vector3f eye_pos{0, 0, 10};
+    Vector3f amb_light_intensity{10, 10, 10};
+    Vector3f eye_pos{0, 0, 10};
 
     float p = 150;
 
-    Eigen::Vector3f color = texture_color;
-    Eigen::Vector3f point = payload.view_pos;
-    Eigen::Vector3f normal = payload.normal;
+    Vector3f color = texture_color;
+    Vector3f point = payload.view_pos;
+    Vector3f normal = payload.normal;
 
-    Eigen::Vector3f result_color = {0, 0, 0};
+    Vector3f result_color = {0, 0, 0};
 
     for (auto &light : lights)
     {
         // TODO: For each light source in the code, calculate what the *ambient*, *diffuse*, and *specular*
         // components are. Then, accumulate that result on the *result_color* object.
-        Eigen::Vector3f light_dir = light.position - point;
-        Eigen::Vector3f view_dir = eye_pos - point;
+        Vector3f light_dir = light.position - point;
+        Vector3f view_dir = eye_pos - point;
         float r = light_dir.dot(light_dir);
         // ambient
-        Eigen::Vector3f La = ka.cwiseProduct(amb_light_intensity);
+        Vector3f La = ka.cwiseProduct(amb_light_intensity);
         // diffuse
-        Eigen::Vector3f Ld = kd.cwiseProduct(light.intensity / r);
+        Vector3f Ld = kd.cwiseProduct(light.intensity / r);
         Ld *= std::max(0.0f, normal.normalized().dot(light_dir.normalized()));
         // specular
-        Eigen::Vector3f h = (light_dir.normalized() + view_dir.normalized()).normalized();
-        Eigen::Vector3f Ls = ks.cwiseProduct(light.intensity / r);
+        Vector3f h = (light_dir.normalized() + view_dir.normalized()).normalized();
+        Vector3f Ls = ks.cwiseProduct(light.intensity / r);
         Ls *= std::pow(std::max(0.0f, normal.normalized().dot(h)), p);
 
         result_color += (La + Ld + Ls);
@@ -198,10 +199,10 @@ int main(int argc, const char **argv)
 
     r.set_texture(Texture(obj_path + texture_path));
 
-    std::function<Eigen::Vector3f(fragment_shader_payload)> active_shader = texture_fragment_shader;
+    std::function<Vector3f(fragment_shader_payload)> active_shader = texture_fragment_shader;
     r.set_texture(Texture(obj_path + texture_path));
 
-    Eigen::Vector3f eye_pos = {0, 0, 10};
+    Vector3f eye_pos = {0, 0, 10};
 
     r.set_vertex_shader(vertex_shader);
     r.set_fragment_shader(active_shader);

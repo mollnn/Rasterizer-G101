@@ -21,9 +21,9 @@ public:
     Texture *tex= nullptr;
     Triangle();
 
-    Eigen::Vector4f a() const { return v[0]; }
-    Eigen::Vector4f b() const { return v[1]; }
-    Eigen::Vector4f c() const { return v[2]; }
+    Vector4f a() const { return v[0]; }
+    Vector4f b() const { return v[1]; }
+    Vector4f c() const { return v[2]; }
 
     void setVertex(int ind, Vector4f ver); /*set i-th vertex coordinates */
     void setNormal(int ind, Vector3f n); /*set i-th vertex normal vector*/
