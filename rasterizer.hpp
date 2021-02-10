@@ -86,8 +86,6 @@ namespace rst
         std::vector<Vector3f>& frame_buffer() { return frame_buf; }
 
     private:
-        void draw_line(Vector3f begin, Vector3f end);
-
         void rasterize_triangle(const Triangle& t, const std::array<Vector3f, 3>& world_pos);
 
         // VERTEX SHADER -> MVP -> Clipping -> /.W -> VIEWPORT -> DRAWLINE/DRAWTRI -> FRAGSHADER

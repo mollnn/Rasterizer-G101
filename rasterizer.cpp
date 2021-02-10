@@ -43,107 +43,6 @@ rst::col_buf_id rst::rasterizer::load_normals(const std::vector<Vector3f> &norma
     return {id};
 }
 
-// Bresenham's line drawing algorithm
-void rst::rasterizer::draw_line(Vector3f begin, Vector3f end)
-{
-    auto x1 = begin.x();
-    auto y1 = begin.y();
-    auto x2 = end.x();
-    auto y2 = end.y();
-
-    Vector3f line_color = {255, 255, 255};
-
-    int x, y, dx, dy, dx1, dy1, px, py, xe, ye, i;
-
-    dx = x2 - x1;
-    dy = y2 - y1;
-    dx1 = fabs(dx);
-    dy1 = fabs(dy);
-    px = 2 * dy1 - dx1;
-    py = 2 * dx1 - dy1;
-
-    if (dy1 <= dx1)
-    {
-        if (dx >= 0)
-        {
-            x = x1;
-            y = y1;
-            xe = x2;
-        }
-        else
-        {
-            x = x2;
-            y = y2;
-            xe = x1;
-        }
-        Vector2i point = Vector2i(x, y);
-        set_pixel(point, line_color);
-        for (i = 0; x < xe; i++)
-        {
-            x = x + 1;
-            if (px < 0)
-            {
-                px = px + 2 * dy1;
-            }
-            else
-            {
-                if ((dx < 0 && dy < 0) || (dx > 0 && dy > 0))
-                {
-                    y = y + 1;
-                }
-                else
-                {
-                    y = y - 1;
-                }
-                px = px + 2 * (dy1 - dx1);
-            }
-            //            delay(0);
-            Vector2i point = Vector2i(x, y);
-            set_pixel(point, line_color);
-        }
-    }
-    else
-    {
-        if (dy >= 0)
-        {
-            x = x1;
-            y = y1;
-            ye = y2;
-        }
-        else
-        {
-            x = x2;
-            y = y2;
-            ye = y1;
-        }
-        Vector2i point = Vector2i(x, y);
-        set_pixel(point, line_color);
-        for (i = 0; y < ye; i++)
-        {
-            y = y + 1;
-            if (py <= 0)
-            {
-                py = py + 2 * dx1;
-            }
-            else
-            {
-                if ((dx < 0 && dy < 0) || (dx > 0 && dy > 0))
-                {
-                    x = x + 1;
-                }
-                else
-                {
-                    x = x - 1;
-                }
-                py = py + 2 * (dx1 - dy1);
-            }
-            //            delay(0);
-            Vector2i point = Vector2i(x, y);
-            set_pixel(point, line_color);
-        }
-    }
-}
-
 auto to_vec4(const Vector3f &v3, float w = 1.0f)
 {
     return Vector4f(v3.x(), v3.y(), v3.z(), w);
@@ -285,7 +184,7 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t, const std::array<Vec
     {
         for (int y = min_y; y <= max_y; y++)
         {
-            float min_depth = __FLT_MAX__;
+            float cur_depth = __FLT_MAX__;
 
             // 颜色缓冲区
             Vector3f color_add(0, 0, 0);
@@ -299,21 +198,20 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t, const std::array<Vec
                 float w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
                 float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
                 z_interpolated *= w_reciprocal;
-                // Update
-                min_depth = std::min(min_depth, z_interpolated);
-                // 对颜色、法线、纹理坐标计算线性插值
-                auto interpolated_color = interpolate(alpha, beta, gamma, t.color[0], t.color[1], t.color[2], 1);
-                auto interpolated_normal = interpolate(alpha, beta, gamma, t.normal[0], t.normal[1], t.normal[2], 1).normalized();
-                auto interpolated_texcoords = interpolate(alpha, beta, gamma, t.tex_coords[0], t.tex_coords[1], t.tex_coords[2], 1);
-                auto interpolated_shadingcoords = interpolate(alpha, beta, gamma, view_pos[0], view_pos[1], view_pos[2], 1);
-                // 调用 fragment shader
-                fragment_shader_payload payload(interpolated_color, interpolated_normal, interpolated_texcoords, texture ? &*texture : nullptr);
-                payload.view_pos = interpolated_shadingcoords;
-                auto pixel_color = fragment_shader(payload);
-                color_add += pixel_color;
-                if (depth_buf[get_index(x, y)] > min_depth)
+                cur_depth = std::min(cur_depth, z_interpolated);
+                if (depth_buf[get_index(x, y)] > cur_depth)
                 {
-                    depth_buf[get_index(x, y)] = min_depth;
+                    // 对颜色、法线、纹理坐标计算线性插值
+                    auto interpolated_color = interpolate(alpha, beta, gamma, t.color[0], t.color[1], t.color[2], 1);
+                    auto interpolated_normal = interpolate(alpha, beta, gamma, t.normal[0], t.normal[1], t.normal[2], 1).normalized();
+                    auto interpolated_texcoords = interpolate(alpha, beta, gamma, t.tex_coords[0], t.tex_coords[1], t.tex_coords[2], 1);
+                    auto interpolated_shadingcoords = interpolate(alpha, beta, gamma, view_pos[0], view_pos[1], view_pos[2], 1);
+                    // 调用 fragment shader
+                    fragment_shader_payload payload(interpolated_color, interpolated_normal, interpolated_texcoords, texture ? &*texture : nullptr);
+                    payload.view_pos = interpolated_shadingcoords;
+                    auto pixel_color = fragment_shader(payload);
+                    color_add += pixel_color;
+                    depth_buf[get_index(x, y)] = cur_depth;
                     Vector2i tmp_point;
                     tmp_point << x, y;
                     auto color = color_add;
