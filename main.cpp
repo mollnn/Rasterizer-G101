@@ -8,8 +8,9 @@
 #include "Texture.hpp"
 #include "OBJ_Loader.h"
 
-using namespace Eigen;
+#include "timer.hpp"
 
+using namespace Eigen;
 
 Matrix4f get_view_matrix(Vector3f eye_pos)
 {
@@ -177,7 +178,7 @@ int main(int argc, const char **argv)
     objl::Loader Loader;
     std::string obj_path = "../models/spot/";
     bool loadout = Loader.LoadFile("../models/spot/spot_triangulated_good.obj");
-    auto texture_path =  "spot_texture.png";
+    auto texture_path = "spot_texture.png";
 
     for (auto mesh : Loader.LoadedMeshes)
     {
@@ -209,6 +210,9 @@ int main(int argc, const char **argv)
     int key = 0;
     int frame_count = 0;
 
+    Timer timer;
+    timer.Start();
+
     while (key != 27)
     {
         r.clear(rst::Buffers::Color | rst::Buffers::Depth);
@@ -226,6 +230,9 @@ int main(int argc, const char **argv)
         cv::imshow("image", image);
         cv::imwrite(filename, image);
         key = cv::waitKey(1);
+
+        frame_count++;
+        std::cout << "Frame " << frame_count << ", \tTotal time: " << timer.Current() << ", \tAverage FPS: " << frame_count * 1.0 / timer.Current() << std::endl;
     }
     return 0;
 }

@@ -79,8 +79,6 @@ void rst::rasterizer::draw(std::vector<Triangle *> &TriangleList)
 
     Matrix4f mvp = projection * view * model;
 
-    std::cerr << "new draw" << std::endl;
-
     for (const auto &t : TriangleList)
     {
         Triangle newtri = *t;
